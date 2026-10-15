@@ -29,20 +29,32 @@
 <header class="top"><div class="wrap toprow"><div class="brand"><img alt="Ingram Micro" class="brandlogo" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'" src="https://mms.businesswire.com/media/20251222345761/en/611011/22/Ingram_Micro_Wordmark%C2%AE_Blue_HiRes.jpg"/><span class="logofallback">INGRAM MICRO</span></div><div class="topright"><span>Lifecycle analysis workspace</span><span class="tag">PARTNER WORKSPACE</span></div></div></header>
 <section class="hero"><div class="wrap herorow"><div><div class="eyebrow">INGRAM MICRO / CISCO LIFECYCLE INTELLIGENCE</div><h1>Lifecycle <span>Intelligence Platform.</span></h1><p>Analyze Cisco product lifecycles, identify renewal exposure and discover refresh opportunities. Search a SKU or upload a BOM to begin.</p></div><div class="heroaside"><b>DISCOVER → ANALYZE → ACT</b><div>One workspace. Four connected capabilities.</div></div></div></section>
 <main class="wrap main"><aside class="panel side"><h2 class="paneltitle">Start your analysis</h2><p class="sub">Enter up to 20 unique Cisco product IDs. Your results flow into every module.</p><label class="fieldlabel" for="pids">Search Cisco products (PID / SKU)</label><textarea aria-label="Cisco Product IDs for lifecycle analysis" id="pids" placeholder="WS-C3850-48P-S
-C9300-48P-A" spellcheck="false"></textarea><div class="stack"><button class="btn primary" id="analyze">Analyze Cisco products →</button><button class="btn" id="reset">Reset</button></div><label class="upload" for="csvfile">＋ Upload BOM (.csv or .txt)<input accept=".csv,.txt,text/csv,text/plain" id="csvfile" type="file"/></label><div class="smallnote">Paste up to 20 unique PIDs, separated by newlines, commas, semicolons or tabs. Or upload CSV/TXT with PID, Quantity and Description columns. Excel is not supported yet.</div><div class="smallnote" id="bomSummary" role="status" aria-live="polite"></div><div class="current hide" id="coverage"></div></aside><div class="samplealert hide" id="searchStatus" role="status" aria-live="polite"></div><div class="sectionlabel">Four connected capabilities</div><nav aria-label="Platform modules" class="modules"><button class="module on" data-view="bom"><span class="modicon">▦</span><b>Bulk BOM Analysis</b><span>Scan product lists and uncover lifecycle exposure.</span></button><button class="module" data-view="timeline"><span class="modicon">◷</span><b>Lifecycle Timeline</b><span>See milestones and renewal exposure by product.</span></button><button class="module" data-view="migration"><span class="modicon">⇄</span><b>Migration Advisor</b><span>Explore manufacturer-published migration references.</span></button><button class="module" data-view="opportunities"><span class="modicon">↗</span><b>Ingram Refresh Opportunities</b><span>Identify refresh priorities and ask Ingram for validated options.</span></button></nav>
+C9300-48P-A" spellcheck="false"></textarea><div class="stack"><button class="btn primary" id="analyze">Analyze Cisco products →</button><button class="btn" id="reset">Reset</button></div><label class="upload" for="csvfile">＋ Upload BOM (.xlsx, .csv or .txt)<input accept=".xlsx,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" id="csvfile" type="file"/></label><div class="smallnote">Paste up to 20 unique PIDs, separated by newlines, commas, semicolons or tabs. Or upload Excel (.xlsx), CSV or TXT with PID, Quantity and Description columns. Maximum file size: 1 MB.</div><div id="sheetPicker" class="hide"><label class="fieldlabel" for="bomSheet">Choose a BOM worksheet</label><select id="bomSheet" aria-label="BOM worksheet"></select></div><div class="smallnote" id="bomSummary" role="status" aria-live="polite"></div><div class="current hide" id="coverage"></div></aside><div class="samplealert hide" id="searchStatus" role="status" aria-live="polite"></div><div class="sectionlabel">Four connected capabilities</div><nav aria-label="Platform modules" class="modules"><button class="module on" data-view="bom"><span class="modicon">▦</span><b>Bulk BOM Analysis</b><span>Scan product lists and uncover lifecycle exposure.</span></button><button class="module" data-view="timeline"><span class="modicon">◷</span><b>Lifecycle Timeline</b><span>See milestones and renewal exposure by product.</span></button><button class="module" data-view="migration"><span class="modicon">⇄</span><b>Migration Advisor</b><span>Explore manufacturer-published migration references.</span></button><button class="module" data-view="opportunities"><span class="modicon">↗</span><b>Ingram Refresh Opportunities</b><span>Identify refresh priorities and ask Ingram for validated options.</span></button></nav>
 <div class="workspace">
 <div class="rightcol"><div class="metrics"><div class="panel metric"><div class="label">Products analyzed</div><b id="mTotal">0</b><div class="foot">Unique requested PIDs</div></div><div class="panel metric"><div class="label">EoX records found</div><b id="mFound">0</b><div class="foot">Published lifecycle notices</div></div><div class="panel metric"><div class="label">Past last support</div><b id="mEnded">0</b><div class="foot">Based on today's date</div></div><div class="panel metric"><div class="label">Migration references</div><b id="mMigration">0</b><div class="foot">Cisco-published alternative PIDs</div></div></div><section class="panel content"><div class="contenthead"><div><h2 id="viewTitle">Bulk BOM Analysis</h2><p id="viewDesc">Lifecycle visibility across your uploaded product list.</p></div><button class="btn small" id="export">↓ Export CSV</button></div><div id="viewContent"></div></section></div></div></main>
 <footer class="footer"><div class="wrap"><div class="signature">Developed by <a href="https://www.linkedin.com/in/calacamli" target="_blank" rel="noopener noreferrer">Cihan Alaçamlı ↗</a></div><div>Ingram Micro Türkiye · Lifecycle and migration information is manufacturer-published. Configuration compatibility, pricing, lead time and service eligibility require verification.</div></div></footer>
+<script src="./assets/xlsx.full.min.js"></script>
+<script src="./assets/intelligence.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const BACKEND_URL='https://lifecycle-api.cihan989.workers.dev';
-let bom=new Map(),importVersion=0,importing=false;
+let bom=new Map(),importVersion=0,importing=false,excelWorkbook=null;
 let records=new Map(),query=[],view='bom',chosen=null,loading=false,searchError='',controller=null,requestId=0;
 const fields=[['EOXExternalAnnouncementDate','EoX Announcement'],['EndOfSaleDate','End of Sale'],['EndOfSWMaintenanceReleases','Software Maintenance'],['EndOfSecurityVulSupportDate','Security Vulnerability Support'],['EndOfServiceContractRenewal','Service Contract Renewal'],['LastDateOfSupport','Last Date of Support']];
-function dateVal(v){if(typeof v==='string')return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';return v&&typeof v.value==='string'?v.value:''}
+function dateVal(value){
+ const text=typeof value==='string'?value:value?.value;
+ if(typeof text!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(text))return '';
+ const date=new Date(text+'T00:00:00Z');
+ return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===text?text:'';
+}
 function dateDisplay(v){if(!v)return 'Not published';const [y,m,d]=v.split('-');return d+'.'+m+'.'+y}
-function dayDiff(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00Z')-new Date(new Date().toISOString().slice(0,10)+'T00:00:00Z'))/86400000)}
+function dayDiff(date){
+ if(!dateVal(date))return null;
+ const now=new Date();
+ const today=Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+ return Math.round((new Date(date+'T00:00:00Z').getTime()-today)/86400000);
+}
 function migration(r){const m=r?.EOXMigrationDetails;if(!m)return [];const a=Array.isArray(m)?m:[m];return [...new Set(a.flatMap(x=>String(x?.MigrationProductId||'').split(/[,;]+/).map(s=>s.trim())).filter(Boolean))]}
 // Adapt the Worker response to the existing result components.
 function normalizeResult(data,pid){
@@ -56,17 +68,20 @@ function normalizeResult(data,pid){
  const r={EOLProductID:pid,ProductIDDescription:data.description||'',ProductBulletinNumber:data.bulletin||'',LinkToProductBulletinURL:data.bulletin_url||''};
  const dates={announcement:'EOXExternalAnnouncementDate',end_of_sale:'EndOfSaleDate',end_of_sw_maintenance:'EndOfSWMaintenanceReleases',end_of_security_support:'EndOfSecurityVulSupportDate',end_of_service_contract_renewal:'EndOfServiceContractRenewal',last_date_of_support:'LastDateOfSupport',end_of_routine_failure_analysis:'EndOfRoutineFailureAnalysisDate',end_of_service_attach:'EndOfSvcAttachDate',updated:'UpdatedTimeStamp'};
  for(const [key,field] of Object.entries(dates))r[field]=dateVal(data.dates[key]);
+ const mapMigration=m=>({MigrationProductId:m.pid||'',MigrationInformation:m.information||'',MigrationOption:m.option||'',MigrationProductName:m.product_name||'',MigrationStrategy:m.strategy||'',MigrationProductInfoURL:m.product_info_url||''});
  const m=data.migration;
- if(m&&typeof m==='object')r.EOXMigrationDetails={MigrationProductId:m.pid||'',MigrationInformation:m.information||'',MigrationOption:m.option||'',MigrationProductName:m.product_name||'',MigrationStrategy:m.strategy||'',MigrationProductInfoURL:m.product_info_url||''};
+ if(Array.isArray(m))r.EOXMigrationDetails=m.filter(x=>x&&typeof x==='object').map(mapMigration);
+ else if(m&&typeof m==='object')r.EOXMigrationDetails=mapMigration(m);
  return r;
 }
 function setStatus(message,error=false){const el=$('searchStatus');el.textContent=message;el.classList.toggle('hide',!message);el.setAttribute('role',error?'alert':'status')}
-function setLoading(value){loading=value;$('analyze').disabled=value;$('analyze').textContent=value?'Retrieving lifecycle information…':'Analyze Cisco products →';$('pids').disabled=value;$('csvfile').disabled=value;$('export').disabled=value||!query.length;$('viewContent').setAttribute('aria-busy',String(value))}
+function setLoading(value){loading=value;$('analyze').disabled=value;$('analyze').textContent=value?'Retrieving lifecycle information…':'Analyze Cisco products →';$('pids').disabled=value;$('csvfile').disabled=value;$('bomSheet').disabled=value;$('export').disabled=value||!query.length;$('viewContent').setAttribute('aria-busy',String(value))}
 async function analyze(){
  if(loading||importing)return;
  const ids=parsePids($('pids').value);
  records.clear();query=[];chosen=null;searchError='';
  if(!ids.length||ids.length>20){setStatus(ids.length>20?'Maximum 20 unique PIDs per analysis. Please shorten your list.':'Please enter at least one Cisco product ID.',true);render();return}
+ timelineFilter='all';
  const id=++requestId;
  controller=new AbortController();const activeController=controller;
  const timeout=setTimeout(()=>activeController.abort(),30000);
@@ -92,22 +107,13 @@ function get(pid){const r=records.get(pid);if(!r)return {pid,state:'outside',r:n
 function stateName(s){return {outside:'Unverified',invalid:'Invalid PID',error:'Lookup failed',no_notice:'No published EoX notice found',ended:'Support ended',soon:'Support ≤365 days',published:'EoX published'}[s]||s}
 function cls(s){return {outside:'grey',no_notice:'grey',ended:'red',soon:'amber',published:'blue',invalid:'amber',error:'red'}[s]||'grey'}
 function pill(s){return `<span class="badge ${cls(s)}">${stateName(s)}</span>`}
-function link(r){let u=String(r?.LinkToProductBulletinURL||'');return /^https:\/\//i.test(u)?`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">Cisco bulletin ↗</a>`:'—'}
+function link(record){const url=officialUrl(record?.LinkToProductBulletinURL);return url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Cisco bulletin ?</a>`:'No verified Cisco bulletin link'}
 function qs(){return query.map(get)}
 function selected(){return chosen?get(chosen):qs()[0]}
-function bomDetail(pid){const item=bom.get(pid);return item?`<div class="callout"><b>BOM quantity:</b> ${item.quantity}<br><b>Original BOM lines:</b> ${item.lines.map(line=>`${line.line}: ${esc(line.cells.join(' | '))}`).join('<br>')}</div>`:''}
+function bomDetail(pid){const item=bom.get(pid);return item?`<div class="callout"><b>BOM quantity:</b> ${item.quantity}<br><b>Original BOM lines:</b> ${item.lines.map(line=>`${line.sheet?esc(line.sheet)+' / ':''}${line.line}: ${esc(line.cells.join(' | '))}`).join('<br>')}</div>`:''}
 function detail(t){if(t?.r?.EOXError)return `<div class="detail"><h3>${esc(t.pid)}</h3>${pill(t.state)}<p class="sub">${esc(t.r.EOXError.ErrorDescription||'Lifecycle status remains unverified.')}</p></div>`;if(!t||!t.r||!t.r.EOLProductID)return '';let r=t.r;return `<div class="detail"><div class="inline" style="justify-content:space-between"><div><h3>${esc(t.pid)}</h3><span class="sub">${esc(r.ProductIDDescription||'Cisco EoX record')}</span></div>${pill(t.state)}</div><div class="detailgrid">${fields.map(([k,l])=>`<div class="datebox"><span>${l}</span><b>${esc(dateDisplay(dateVal(r[k])))}</b></div>`).join('')}</div><div class="callout"><b>Cisco migration references:</b> ${migration(r).length?migration(r).map(esc).join(', '):'Not published in this record'}<br><b>Bulletin:</b> ${esc(r.ProductBulletinNumber||'—')} · ${link(r)}<br><b>Record updated:</b> ${esc(dateDisplay(dateVal(r.UpdatedTimeStamp)))}</div></div>`}
-function row(t){let r=t.r;return `<tr data-pid="${esc(t.pid)}"><td><strong>${esc(t.pid)}</strong>${bom.has(t.pid)?`<div class="sub">BOM Qty: ${bom.get(t.pid).quantity} ? Lines: ${bom.get(t.pid).lines.map(x=>x.line).join(', ')}</div>`:''}<div class="sub">${esc(r?.EOXError?.ErrorDescription||r?.ProductIDDescription||'—')}</div></td><td>${pill(t.state)}</td><td>${esc(dateDisplay(dateVal(r?.EndOfSaleDate)))}</td><td>${esc(dateDisplay(dateVal(r?.LastDateOfSupport)))}</td><td>${esc(migration(r).join(', ')||'—')}</td><td><span style="color:#157cbb;font-weight:700">Inspect →</span></td></tr>`}
+function row(t){let r=t.r;return `<tr data-pid="${esc(t.pid)}"><td><strong>${esc(t.pid)}</strong>${bom.has(t.pid)?`<div class="sub">BOM Qty: ${bom.get(t.pid).quantity} | Lines: ${bom.get(t.pid).lines.map(x=>x.line).join(', ')}</div>`:''}<div class="sub">${esc(r?.EOXError?.ErrorDescription||r?.ProductIDDescription||'—')}</div></td><td>${pill(t.state)}</td><td>${esc(dateDisplay(dateVal(r?.EndOfSaleDate)))}</td><td>${esc(dateDisplay(dateVal(r?.LastDateOfSupport)))}</td><td>${esc(migration(r).join(', ')||'—')}</td><td><span style="color:#157cbb;font-weight:700">Inspect →</span></td></tr>`}
 function table(items){return `<div class="tablewrap"><table><thead><tr><th>Product ID</th><th>Status</th><th>End of Sale</th><th>Last Support</th><th>Migration PID</th><th></th></tr></thead><tbody>${items.map(row).join('')}</tbody></table></div>${detail(selected())}${chosen?bomDetail(chosen):''}`}
-function render(){const items=qs(),found=items.filter(x=>x.r?.EOLProductID),end=items.filter(x=>x.state==='ended');$('mTotal').textContent=items.length;$('mFound').textContent=found.length;$('mEnded').textContent=end.length;$('mMigration').textContent=items.reduce((n,x)=>n+migration(x.r).length,0);
-const names={bom:['Bulk BOM Analysis','Product-by-product lifecycle visibility for your BOM.'],timeline:['Lifecycle Timeline & Renewal Exposure','Select a product to review its milestones and renewal-related dates.'],migration:['Migration Advisor','Cisco-published alternative PIDs, not yet a validated configuration.'],renewal:['Renewal Exposure Analyzer','Lifecycle-related renewal milestones, not live contract information.'],opportunities:['Ingram Refresh Opportunities','Prioritize refresh opportunities and request a validated configuration from Ingram.']};$('viewTitle').textContent=names[view][0];$('viewDesc').textContent=names[view][1];document.querySelectorAll('.module').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
-$('export').disabled=loading||!query.length;
-let out='';if(loading)out='<div class="empty"><b>Retrieving lifecycle information…</b>Please wait.</div>';else if(searchError)out='<div class="empty"><b>Lifecycle information unavailable</b>Please retry your search.</div>';else if(!items.length)out='<div class="empty"><b>No products selected</b>Enter Cisco PIDs to start the analysis.</div>';
-else if(view==='bom')out=`<div class="callout">Lifecycle information for <b>${items.length}</b> requested product. Absence of an EoX notice does not confirm active support.</div>${table(items)}`;
-else if(view==='timeline'){const list=items.filter(x=>x.r?.EOLProductID);out=list.length?`<div class="callout"><b>One row per product.</b> Select any SKU to view its milestones, including renewal and support deadlines. ${items.length} products analyzed.</div><div class="timelineproducts">${list.map((x,i)=>{const r=x.r,events=fields.map(([k,label])=>({label,date:dateVal(r[k]),renewal:k==='EndOfServiceContractRenewal'})).filter(z=>z.date).sort((a,b)=>a.date.localeCompare(b.date));const next=events.find(z=>dayDiff(z.date)>=0);return `<details class="lifeproduct" ${list.length===1||i===0?'open':''}><summary><span><b>${esc(x.pid)}</b><span class="sub">${esc(r.ProductIDDescription||'Product lifecycle')}</span></span><span class="lifesummary">${pill(x.state)} <span class="mini-next">${next?esc(dateDisplay(next.date))+' · '+esc(next.label):'No upcoming published milestone'}</span></span><span class="expandicon">⌄</span></summary><div class="lifeevents"><div class="milestone-grid">${events.map(e=>`<div class="milestone ${e.renewal?'renewal-mile':''}"><span>${esc(e.label)}</span><b>${esc(dateDisplay(e.date))}</b><small>${dayDiff(e.date)<0?'Date passed':dayDiff(e.date)+' days remaining'}</small></div>`).join('')}</div><div class="renewalnote"><b>Renewal exposure:</b> Last published service contract renewal date: ${esc(dateDisplay(dateVal(r.EndOfServiceContractRenewal)))}. This is a product lifecycle cutoff, not your actual contract expiration date.</div><div class="recordlink">${link(r)}</div></div></details>`}).join('')}</div>`:'<div class="empty"><b>No published milestones for these products.</b> Other searched products remain unverified.</div>'}
-else if(view==='migration'){const m=items.filter(x=>migration(x.r).length);out=m.length?`<div class="oplist">${m.map(x=>`<article class="op"><div><h3>${esc(x.pid)} → ${esc(migration(x.r).join(', '))}</h3><p>${esc(x.r.EOXMigrationDetails?.MigrationInformation||'Cisco published migration PID')}</p><p style="margin-top:8px">${link(x.r)}</p></div>${pill(x.state)}</article>`).join('')}</div><div class="callout">Migration IDs originate from Cisco EoX. Check compatibility, licensing and ordering with Ingram Presales before quoting.</div>`:'<div class="empty"><b>No published migration PID</b>This does not mean there is no possible alternative.</div>'}
-else if(view==='opportunities'){let p=items.filter(x=>x.r?.EOLProductID).map(x=>{let score=x.state==='ended'?85:x.state==='soon'?70:40;if(migration(x.r).length)score+=10;return {...x,score:Math.min(score,95)}}).sort((a,b)=>b.score-a.score);out=p.length?`<div class="callout">The priority score is an Ingram assessment based on lifecycle milestones and available migration references. It is not a Cisco rating, commercial quotation or guarantee of compatibility.</div><div class="oplist">${p.map(x=>`<article class="op"><div><h3>${esc(x.pid)} ${pill(x.state)}</h3><p>${esc(x.r.ProductIDDescription||'')}</p><p style="margin-top:8px">${x.state==='ended'?'Prioritize refresh conversation: last support date has passed.':x.state==='soon'?'Engage on approaching support end.':'Review upcoming lifecycle milestones.'} ${migration(x.r).length?'Cisco migration PID: '+esc(migration(x.r).join(', '))+'.':''}</p><p style="margin-top:8px">${link(x.r)}</p></div><div><div class="score">${x.score}<span style="font-size:12px">/100</span></div><div class="sub">Priority score</div></div></article>`).join('')}</div>`:'<div class="empty"><b>No scored opportunities</b>Only products with published lifecycle notices are prioritized.</div>'}
-if(view==='opportunities')out+=`<div class="ingram-cta"><div><div class="cta-kicker">INGRAM MICRO · CISCO PRESALES</div><h3>Ready to turn lifecycle risk into a refresh project?</h3><p>Contact Ingram for validated configuration, price and lead time. Cisco migration references are a starting point, not a complete orderable BOM.</p></div><button class="btn primary" id="sendIngram">✉ Send email to Ingram →</button></div>`;$('viewContent').innerHTML=out;document.querySelectorAll('[data-pid]').forEach(tr=>tr.onclick=()=>{chosen=tr.dataset.pid;render()});const send=$('sendIngram');if(send)send.onclick=()=>{const ids=qs().filter(x=>x.r?.EOLProductID).map(x=>x.pid);const subject='Cisco Lifecycle Refresh – Configuration, Price & Lead Time Request';const body='Hello Ingram Micro Cisco Team,\n\nPlease help us validate replacement configurations, current lead times and pricing for the following Cisco PIDs:\n\n'+(ids.join('\n')||'[Add Cisco PIDs]')+'\n\nCustomer / project: [Please complete]\nQuantity: [Please complete]\nAdditional requirements: [Please complete]\n\nThank you.';location.href='mailto:'+encodeURIComponent('PLACEHOLDER_INGRAM_CISCO_PRESALES_EMAIL')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body)}}
 // Parse quoted fields, escaped quotes and multiline CSV without external libraries.
 function delimitedRows(text,delimiter){
  const rows=[];let cells=[],field='',quoted=false,closed=false,line=1,start=1;
@@ -137,7 +143,9 @@ function parseBom(text){
   if(!/\s/.test(c))hasText=true;
  }
  const delimiter=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
- const rows=delimitedRows(text,delimiter);
+ return parseBomRows(delimitedRows(text,delimiter));
+}
+function parseBomRows(rows){
  if(!rows.length)throw Error('The file is empty.');
  if(rows.length>1001)throw Error('Maximum 1000 BOM lines per file.');
  const key=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');
@@ -169,33 +177,88 @@ function parseBom(text){
   const item=items.get(pid)||{quantity:0,lines:[]};
   if(!Number.isSafeInteger(item.quantity+quantity))throw Error('Quantity total is too large for '+pid+'.');
   item.quantity+=quantity;
-  item.lines.push({line:row.line,cells:row.cells,description:descIndex<0?'':row.cells[descIndex].trim()});items.set(pid,item);
+  item.lines.push({line:row.line,sheet:row.sheet||'',cells:row.cells,description:descIndex<0?'':row.cells[descIndex].trim()});items.set(pid,item);
  }
  if(items.size>20)throw Error('Maximum 20 unique PIDs per analysis. Please split the BOM into smaller files.');
  return {items,lineCount:data.length};
 }
-function clearBom(){bom.clear();$('bomSummary').textContent='';$('csvfile').value=''}
-$('pids').oninput=clearBom;
+function clearExcel(){excelWorkbook=null;$('bomSheet').innerHTML='';$('sheetPicker').classList.toggle('hide',true)}
+function clearBom(){bom.clear();$('bomSummary').textContent='';$('csvfile').value='';clearExcel()}
+function commitBom(parsed,sheetName=''){
+ bom=parsed.items;$('pids').value=[...bom.keys()].join('\n');
+ records.clear();query=[];chosen=null;searchError='';
+ $('bomSummary').textContent=(sheetName?'Worksheet: '+sheetName+'. ':'')+parsed.lineCount+' BOM lines imported; '+bom.size+' unique PIDs; total quantity '+[...bom.values()].reduce((n,x)=>n+x.quantity,0)+'. Click Analyze to retrieve lifecycle information. Quantities default to 1 when omitted.';
+ setStatus('BOM imported. Review the product IDs, then click Analyze.');
+}
+function readExcel(buffer){
+ if(typeof XLSX==='undefined')throw Error('Excel support could not be loaded. Please refresh the page or use CSV.');
+ const signature=new Uint8Array(buffer,0,Math.min(4,buffer.byteLength));
+ if(signature.length<4||signature[0]!==80||signature[1]!==75||signature[2]!==3||signature[3]!==4)throw Error('This is not a valid .xlsx file. Save it as Excel Workbook (.xlsx) and try again.');
+ try{
+  const workbook=XLSX.read(buffer,{type:'array',sheetRows:1002,cellFormula:true,cellHTML:false,cellDates:true,bookVBA:false});
+  if(!workbook.SheetNames?.length)throw Error('No worksheets');
+  return workbook;
+ }catch(error){console.error('Excel read failed',error);throw Error('This Excel file could not be read. Use an unencrypted .xlsx workbook or save it as CSV.')}
+}
+function excelSheetNames(workbook){
+ return workbook.SheetNames.filter((name,index)=>!workbook.Workbook?.Sheets?.[index]?.Hidden && workbook.Sheets[name]?.['!ref']);
+}
+function parseExcelSheet(workbook,name){
+ const sheet=workbook.Sheets[name];
+ if(!sheet||!sheet['!ref'])throw Error('This worksheet is empty.');
+ const fullRange=XLSX.utils.decode_range(sheet['!fullref']||sheet['!ref']);
+ if(fullRange.e.r>1000)throw Error('Excel worksheets must fit within 1001 rows including the header. Remove extra rows or split the file.');
+ if(fullRange.e.c>99)throw Error('Maximum 100 worksheet columns. Remove unused columns and try again.');
+ if(sheet['!merges']?.length)throw Error('Unmerge cells in the BOM worksheet before importing.');
+ for(const address of Object.keys(sheet)){
+  if(address[0]==='!')continue;
+  const cell=sheet[address];
+  if(cell.f||cell.F)throw Error('Formula found at '+address+'. Paste formulas as values before importing.');
+  if(cell.t==='e')throw Error('Excel error at '+address+'. Correct it before importing.');
+  if(cell.t==='d')throw Error('Date cell found at '+address+'. Use text PIDs and whole-number quantities.');
+ }
+ const range={s:{r:0,c:0},e:fullRange.e};
+ const matrix=XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,defval:'',blankrows:true,range});
+ const rows=matrix.map((cells,index)=>({line:index+1,sheet:name,cells:Array.from(cells,value=>String(value??''))})).filter(row=>row.cells.some(value=>value.trim()));
+ return parseBomRows(rows);
+}
+$('pids').oninput=()=>{clearBom();records.clear();query=[];chosen=null;searchError='';setStatus('');render()};
+$('bomSheet').onchange=()=>{
+ if(!excelWorkbook||loading||importing)return;
+ const name=$('bomSheet').value;
+ bom.clear();$('pids').value='';records.clear();query=[];chosen=null;searchError='';$('bomSummary').textContent='';
+ try{if(name)commitBom(parseExcelSheet(excelWorkbook,name),name);else setStatus('Choose a BOM worksheet to continue.')}
+ catch(error){setStatus(error.message,true)}
+ render();
+};
 $('csvfile').onchange=async event=>{
  const file=event.target.files?.[0];if(!file||loading||importing)return;
  const version=++importVersion;importing=true;setLoading(true);setStatus('Reading BOM file...');
  try{
-  if(!/\.(csv|txt)$/i.test(file.name))throw Error('Choose a CSV or TXT file. Excel is not supported yet.');
+  if(!/\.(xlsx|csv|txt)$/i.test(file.name))throw Error('Choose an Excel (.xlsx), CSV or TXT file.');
   if(file.size>1024*1024)throw Error('Maximum file size is 1 MB.');
-  const parsed=parseBom(await file.text());
-  if(version!==importVersion)return;
-  bom=parsed.items;$('pids').value=[...bom.keys()].join('\n');
-  records.clear();query=[];chosen=null;searchError='';
-  $('bomSummary').textContent=parsed.lineCount+' BOM lines imported; '+bom.size+' unique PIDs; total quantity '+[...bom.values()].reduce((n,x)=>n+x.quantity,0)+'. Click Analyze to retrieve lifecycle information. Quantities default to 1 when omitted.';
-  setStatus('BOM imported. Review the product IDs, then click Analyze.');
+  if(/\.xlsx$/i.test(file.name)){
+   const buffer=await file.arrayBuffer();if(version!==importVersion)return;
+   const workbook=readExcel(buffer),names=excelSheetNames(workbook);
+   if(!names.length)throw Error('No visible, nonempty worksheets found.');
+   if(names.length===1){const parsed=parseExcelSheet(workbook,names[0]);clearExcel();commitBom(parsed,names[0])}
+   else{
+    clearBom();excelWorkbook=workbook;records.clear();query=[];chosen=null;searchError='';$('pids').value='';
+    $('bomSheet').innerHTML='<option value="">Choose a worksheet...</option>'+names.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');
+    $('sheetPicker').classList.toggle('hide',false);setStatus('Choose a BOM worksheet to continue. Only the selected worksheet will be analyzed.');
+   }
+  }else{
+   const parsed=parseBom(await file.text());if(version!==importVersion)return;
+   clearExcel();commitBom(parsed);
+  }
  }catch(error){if(version===importVersion)setStatus(error.message||'The file could not be read. Please check its format.',true)}
  finally{if(version===importVersion){importing=false;setLoading(false);event.target.value='';render()}}
 };
 function parsePids(s){return [...new Set(s.split(/[\r\n,;\t]+/).map(z=>z.trim().replace(/^['"]|['"]$/g,'').toUpperCase()).filter(Boolean))]}
 $('analyze').onclick=analyze;
-$('reset').onclick=()=>{++importVersion;importing=false;bom.clear();$('bomSummary').textContent='';$('csvfile').value='';++requestId;if(controller)controller.abort();controller=null;records.clear();$('pids').value='';query=[];chosen=null;searchError='';setLoading(false);setStatus('');render()};
+$('reset').onclick=()=>{timelineFilter='all';++importVersion;importing=false;clearExcel();bom.clear();$('bomSummary').textContent='';$('csvfile').value='';++requestId;if(controller)controller.abort();controller=null;records.clear();$('pids').value='';query=[];chosen=null;searchError='';setLoading(false);setStatus('');render()};
 document.querySelectorAll('.module').forEach(b=>b.onclick=()=>{view=b.dataset.view;render()});
 
-$('export').onclick=()=>{if(!query.length)return alert('Enter PIDs first.');const rows=[['PID','Data status','Description','EoX announcement','End of sale','SW maintenance','Security support','Last contract renewal','Last support','Migration PID','Bulletin URL','BOM quantity','BOM descriptions','Original BOM lines'],...qs().map(x=>[x.pid,stateName(x.state),x.r?.EOXError?.ErrorDescription||x.r?.ProductIDDescription||'',dateVal(x.r?.EOXExternalAnnouncementDate),dateVal(x.r?.EndOfSaleDate),dateVal(x.r?.EndOfSWMaintenanceReleases),dateVal(x.r?.EndOfSecurityVulSupportDate),dateVal(x.r?.EndOfServiceContractRenewal),dateVal(x.r?.LastDateOfSupport),migration(x.r).join('; '),x.r?.LinkToProductBulletinURL||'',bom.get(x.pid)?.quantity??'',[...new Set((bom.get(x.pid)?.lines||[]).map(line=>line.description).filter(Boolean))].join('; '),(bom.get(x.pid)?.lines||[]).map(line=>line.line+': '+line.cells.join(' | ')).join(' / ')])];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(/^[\s]*[=+@-]/.test(String(v))?"'"+v:v).replaceAll('"','""')+'"').join(',')).join('\r\n');let u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='ingram_lifecycle_analysis.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
+$('export').onclick=()=>{if(!query.length)return alert('Enter PIDs first.');const rows=[['PID','Data status','Description','EoX announcement','End of sale','SW maintenance','Security support','Last contract renewal','Last support','Migration PID','Bulletin URL','BOM quantity','BOM descriptions','Original BOM lines','Renewal exposure','Priority score','Priority explanation','Migration descriptions'],...qs().map(x=>[x.pid,stateName(x.state),x.r?.EOXError?.ErrorDescription||x.r?.ProductIDDescription||'',dateVal(x.r?.EOXExternalAnnouncementDate),dateVal(x.r?.EndOfSaleDate),dateVal(x.r?.EndOfSWMaintenanceReleases),dateVal(x.r?.EndOfSecurityVulSupportDate),dateVal(x.r?.EndOfServiceContractRenewal),dateVal(x.r?.LastDateOfSupport),migration(x.r).join('; '),officialUrl(x.r?.LinkToProductBulletinURL),bom.get(x.pid)?.quantity??'',[...new Set((bom.get(x.pid)?.lines||[]).map(line=>line.description).filter(Boolean))].join('; '),(bom.get(x.pid)?.lines||[]).map(line=>(line.sheet?line.sheet+' / ':'')+line.line+': '+line.cells.join(' | ')).join(' / '),renewalStatus(x),priority(x)?.score??'',priority(x)?.explanation||'Unverified / not scored',migrationEntries(x.r).map(entry=>entry.information).filter(Boolean).join('; ')])];const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(/^[\s]*[=+@-]/.test(String(v))?"'"+v:v).replaceAll('"','""')+'"').join(',')).join('\r\n');let u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download='ingram_lifecycle_analysis.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
 setLoading(false);render();
 </script></body></html>
